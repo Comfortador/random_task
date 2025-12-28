@@ -1,0 +1,895 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Randomizer Final</title>
+    <style>
+        :root {
+            --bg: #f8f9fa;
+            --card: #ffffff;
+            --text: #2d3748;
+            --text-light: #718096;
+            --accent: #3b82f6;
+            --radius: 16px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
+
+        /* --- Layout Columns --- */
+        .panel {
+            flex: 1;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e2e8f0;
+            min-width: 320px;
+            background: var(--bg);
+        }
+        .panel:last-child { border-right: none; }
+
+        h2 { 
+            margin: 0 0 16px 0; 
+            font-size: 0.85rem; 
+            text-transform: uppercase; 
+            color: var(--text-light); 
+            letter-spacing: 1.2px;
+            font-weight: 700;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        button { cursor: pointer; font-family: inherit; }
+
+        .scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 8px;
+            scrollbar-width: thin;
+            scrollbar-color: #cbd5e0 transparent;
+        }
+
+        /* --- LEFT PANEL --- */
+        #active-card {
+            background: var(--card);
+            padding: 30px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            text-align: center;
+            border: 2px dashed #cbd5e0;
+            margin-bottom: 24px;
+            min-height: 160px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        #active-card.active { border-style: solid; background: #fff; }
+
+        .big-check-wrapper {
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 8px 16px;
+            background: #f7fafc;
+            border-radius: 50px;
+            transition: background 0.2s;
+        }
+        .big-check-wrapper:hover { background: #edf2f7; }
+        .big-check-wrapper input { width: 20px; height: 20px; cursor: pointer; }
+
+        /* Settings */
+        details {
+            background: #fff;
+            border-radius: var(--radius);
+            margin-bottom: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            border: 1px solid #e2e8f0;
+            overflow: hidden;
+        }
+        
+        summary {
+            padding: 12px 16px;
+            font-weight: 600;
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.95rem;
+            color: var(--text);
+        }
+        summary::after { content: "▼"; font-size: 0.7rem; color: var(--text-light); transition: transform 0.2s; }
+        details[open] summary::after { transform: rotate(180deg); }
+
+        .settings-content { padding: 16px; border-top: 1px solid #f0f0f0; background: #fcfcfc; }
+        .setting-row { margin-bottom: 16px; }
+        .setting-label { font-size: 0.85rem; font-weight: 700; display: block; margin-bottom: 8px; color: var(--text); }
+
+        input[type=range] { width: 100%; cursor: pointer; accent-color: var(--accent); }
+        .range-labels { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-light); margin-top: 4px; }
+        
+        .cat-edit-row { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; }
+        .cat-edit-color { width: 36px; height: 36px; border: none; padding: 0; background: none; cursor: pointer; border-radius: 8px; overflow: hidden;}
+        .cat-edit-name { flex: 1; padding: 8px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; }
+        .cat-edit-del { color: #e53e3e; background: #fff5f5; border: none; width: 36px; height: 36px; border-radius: 8px; font-size: 1.2rem; display: flex; align-items: center; justify-content: center; }
+        .btn-add-cat { width: 100%; padding: 10px; background: #fff; border: 1px dashed #cbd5e0; color: var(--accent); font-weight: 600; border-radius: 8px; margin-top: 8px; }
+
+        /* Archive Items */
+        .archive-item {
+            padding: 12px;
+            font-size: 0.95rem;
+            opacity: 0.7;
+            background: white;
+            border-radius: 8px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-left: 4px solid #ccc;
+        }
+        .archive-text { text-decoration: line-through; flex: 1; margin-right: 10px; }
+        .restore-btn {
+            background: #ebf8ff; color: var(--accent); border: none; 
+            width: 30px; height: 30px; border-radius: 50%; 
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; transition: background 0.2s;
+        }
+        .restore-btn:hover { background: #bee3f8; }
+
+        .trash-btn {
+            background: none; border: none; font-size: 1.2rem; 
+            opacity: 0.5; transition: opacity 0.2s;
+        }
+        .trash-btn:hover { opacity: 1; color: #e53e3e; }
+
+        /* --- CENTER PANEL --- */
+        #center-panel {
+            background: #f1f5f9;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        #filter-container {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 40px;
+            z-index: 2;
+        }
+
+        .filter-btn {
+            width: 50px; height: 50px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            opacity: 0.3;
+            color: white; font-weight: 800; font-size: 0.7rem;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: var(--shadow);
+            transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        .filter-btn.active { opacity: 1; transform: scale(1.1); border-color: rgba(255,255,255,0.9); }
+
+        #spin-area {
+            position: relative;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 300px;
+        }
+
+        #spin-btn {
+            padding: 24px 60px;
+            font-size: 1.2rem;
+            background: #1a202c;
+            color: white;
+            border: none;
+            border-radius: 100px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            font-weight: 800;
+            letter-spacing: 1px;
+            transition: transform 0.1s;
+            z-index: 10;
+        }
+        #spin-btn:active { transform: scale(0.96); }
+
+        /* Slot Machine */
+        #slot-window {
+            width: 100%;
+            max-width: 400px;
+            height: 200px;
+            background: white;
+            border-radius: var(--radius);
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.1), var(--shadow);
+            overflow: hidden;
+            position: absolute;
+            display: none;
+            border: 4px solid #e2e8f0;
+            mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 15%, black 85%, transparent);
+        }
+
+        #slot-strip {
+            width: 100%;
+            text-align: center;
+        }
+
+        .slot-item {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            padding: 0 20px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* --- RIGHT PANEL --- */
+        #input-area {
+            background: var(--card);
+            padding: 20px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        #task-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 1rem;
+            margin-bottom: 12px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        #task-input:focus { border-color: var(--accent); }
+
+        #input-buttons { display: flex; gap: 8px; }
+
+        .commit-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 700;
+            opacity: 0.9;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        .commit-btn:hover { opacity: 1; transform: translateY(-1px); }
+
+        .task-item {
+            background: var(--card);
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 10px;
+            border-left: 6px solid #ccc;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+            display: flex;
+            align-items: center;
+            transition: transform 0.2s;
+        }
+        .task-item:hover { transform: translateX(2px); }
+
+        .task-item.snoozed {
+            background: #edf2f7;
+            opacity: 0.6;
+            border-left-color: #a0aec0 !important;
+        }
+
+        .task-item input {
+            border: none; background: transparent; width: 100%; font-size: 1rem; outline: none; color: var(--text);
+        }
+
+        /* Delete Button */
+        .task-del-btn {
+            opacity: 0;
+            background: #fed7d7; color: #c53030;
+            border: none; border-radius: 50%; width: 26px; height: 26px;
+            margin-left: 10px; cursor: pointer; font-weight: bold;
+            display: flex; align-items: center; justify-content: center;
+            transition: opacity 0.2s, background 0.2s;
+            font-size: 1.1rem;
+        }
+        .task-del-btn:hover { background: #e53e3e; color: white; }
+        .task-item:hover .task-del-btn { opacity: 1; }
+
+        /* --- MODAL --- */
+        #modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        #winner-card {
+            background: white;
+            width: 90%;
+            max-width: 480px;
+            padding: 40px;
+            border-radius: 24px;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border-top: 12px solid #333;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+        #winner-text { font-size: 2.2rem; margin: 24px 0; font-weight: 800; line-height: 1.2; word-wrap: break-word; color: #1a202c;}
+
+        .modal-btns { display: flex; gap: 12px; justify-content: center; margin-top: 32px; }
+        .btn-act { padding: 14px 28px; border-radius: 12px; border: none; font-size: 1rem; cursor: pointer; font-weight: 700; transition: transform 0.1s;}
+        .btn-act:active { transform: scale(0.96); }
+        .btn-go { background: var(--accent); color: white; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.5); }
+        .btn-wait { background: #edf2f7; color: #4a5568; }
+
+@media (max-width: 900px) {
+            body { flex-direction: column; overflow-y: auto; height: auto;}
+            .panel { min-height: auto; min-width: auto; height: auto; border-right: none; border-bottom: 1px solid #e2e8f0; padding-top: 30px; padding-bottom: 30px;}
+            
+            /* Order Changes for Mobile */
+            
+            /* 1. Spin Wheel (Center) */
+            #center-panel { order: 1; } 
+            
+            /* 2. Active Task (Left) */
+            #left-panel { order: 2; } 
+            
+            /* 3. Task List (Right) - explicitly targets the 3rd panel */
+            .panel:nth-of-type(3) { order: 3; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- LEFT PANEL -->
+    <div class="panel" id="left-panel">
+        <h2>Active Task</h2>
+        <div id="active-card">
+            <p style="color:#a0aec0; font-weight:500;" id="placeholder-msg">No active task selected.</p>
+            <div id="active-content" style="display:none; width:100%;">
+                <h3 id="current-text" style="font-size:1.5rem; margin:0; word-wrap:break-word;">...</h3>
+                <div id="current-cat-label" style="font-weight:800; margin-top:8px; font-size:0.9rem; letter-spacing:1px;">CAT</div>
+                <div class="big-check-wrapper" onclick="completeTask()">
+                    <input type="checkbox" id="main-check">
+                    <span>Mark Complete</span>
+                </div>
+            </div>
+        </div>
+
+        <details>
+            <summary>⚙️ Settings & Categories</summary>
+            <div class="settings-content">
+                <!-- Auto Roll -->
+                <div class="setting-row">
+                    <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
+                        <input type="checkbox" id="opt-autoroll" onchange="updateSettings()" style="width:18px; height:18px;"> 
+                        Auto-roll on Complete
+                    </label>
+                </div>
+
+                <!-- Snooze -->
+                <div class="setting-row">
+                    <span class="setting-label">Reroll Behavior (Snooze Timer)</span>
+                    <input type="range" id="opt-snooze" min="0" max="4" step="1" oninput="updateSettingsUI()" onchange="updateSettings()">
+                    <div class="range-labels">
+                        <span>Off</span><span>30m</span><span>2h</span><span>1d</span><span>Del</span>
+                    </div>
+                    <div id="snooze-display" style="text-align:center; color:var(--accent); font-weight:700; margin-top:6px; font-size:0.9rem;"></div>
+                </div>
+
+                <!-- Spin Speed -->
+                <div class="setting-row">
+                    <span class="setting-label">Animation Duration</span>
+                    <input type="range" id="opt-speed" min="0" max="10" step="1" oninput="updateSettingsUI()" onchange="updateSettings()">
+                    <div class="range-labels">
+                        <span>Instant</span><span>5s</span><span>10s</span>
+                    </div>
+                    <div id="speed-display" style="text-align:center; color:var(--accent); font-weight:700; margin-top:6px; font-size:0.9rem;"></div>
+                </div>
+
+                <!-- Categories -->
+                <div class="setting-row">
+                    <span class="setting-label">Categories</span>
+                    <div id="cat-list"></div>
+                    <button class="btn-add-cat" onclick="addCategory()">+ New Category</button>
+                </div>
+            </div>
+        </details>
+
+        <h2>
+            Archive 
+            <button class="trash-btn" onclick="clearArchive()" title="Clear Archive">🗑️</button>
+        </h2>
+        <div class="scroll-area" id="archive-list"></div>
+    </div>
+
+    <!-- CENTER PANEL -->
+    <div class="panel" id="center-panel">
+        <div id="filter-container"></div>
+        
+        <div id="spin-area">
+            <button id="spin-btn" onclick="prepareSpin()">SPIN THE WHEEL</button>
+            
+            <div id="slot-window">
+                <div id="slot-strip">
+                    <!-- JS Injected items -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT PANEL -->
+    <div class="panel">
+        <h2>Add Item</h2>
+        <div id="input-area">
+            <input type="text" id="task-input" placeholder="Type new task..." onkeypress="if(event.key==='Enter') quickAdd()">
+            <div id="input-buttons"></div>
+        </div>
+
+        <h2>Task Queue</h2>
+        <div class="scroll-area" id="todo-list"></div>
+    </div>
+
+    <!-- WINNER MODAL -->
+    <div id="modal-overlay">
+        <div id="winner-card">
+            <h3 style="margin:0; color:#a0aec0; text-transform:uppercase; font-size:0.9rem; letter-spacing:1px;">Fate has chosen</h3>
+            <div id="winner-text">...</div>
+            <div class="modal-btns">
+                <button class="btn-act btn-wait" onclick="reroll()">Reroll</button>
+                <button class="btn-act btn-go" onclick="acceptWinner()">Start Task</button>
+            </div>
+            <div id="reroll-hint" style="font-size:0.85rem; color:#a0aec0; margin-top:16px;"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Constants ---
+        const SAVE_KEY = "TaskRandomizer_V_Final_Pro";
+        const SNOOZE_DURATIONS = [0, 30*60000, 120*60000, 1440*60000, -1];
+        const SNOOZE_LABELS = ["Disabled", "30 Mins", "2 Hours", "1 Day", "Delete"];
+        const ITEM_HEIGHT = 60; // Must match CSS .slot-item height
+
+        const DEFAULT_CATS = [
+            { id: 'easy', label: 'Easy', color: '#4caf50' },   // Green
+            { id: 'med', label: 'Medium', color: '#f6ad55' },  // Orange/Yellow
+            { id: 'hard', label: 'Hard', color: '#fc8181' }    // Red
+        ];
+
+        // --- State ---
+        let state = {
+            tasks: [],
+            archive: [],
+            current: null,
+            filters: ['easy', 'med', 'hard'],
+            settings: {
+                autoRoll: false,
+                snoozeIdx: 1, 
+                spinSeconds: 3, 
+                categories: JSON.parse(JSON.stringify(DEFAULT_CATS))
+            }
+        };
+        
+        let tempWinner = null;
+
+        // --- Init ---
+        function init() {
+            const loaded = localStorage.getItem(SAVE_KEY);
+            if (loaded) {
+                try {
+                    const parsed = JSON.parse(loaded);
+                    state = { ...state, ...parsed };
+                    if (!state.settings.categories || state.settings.categories.length === 0) {
+                        state.settings.categories = JSON.parse(JSON.stringify(DEFAULT_CATS));
+                    }
+                    if (state.settings.spinSeconds === undefined) state.settings.spinSeconds = 3;
+                } catch(e) { console.log("Resetting save"); }
+            }
+
+            document.getElementById('opt-autoroll').checked = state.settings.autoRoll;
+            document.getElementById('opt-snooze').value = state.settings.snoozeIdx;
+            document.getElementById('opt-speed').value = state.settings.spinSeconds;
+            
+            updateSettingsUI();
+            renderAll();
+            setInterval(renderRight, 30000); 
+        }
+
+        function save() {
+            localStorage.setItem(SAVE_KEY, JSON.stringify(state));
+        }
+
+        // --- Core Logic ---
+
+        function addTask(catId) {
+            const input = document.getElementById('task-input');
+            const txt = input.value.trim();
+            if (!txt) return alert("Type a task first!");
+
+            doAddTask(txt, catId);
+
+            input.value = "";
+            input.focus();
+            renderRight();
+            renderCenter();
+        }
+
+        function doAddTask(text, catId) {
+            // Unshift adds to TOP of list
+            state.tasks.unshift({
+                id: Date.now() + Math.random(),
+                text: text,
+                catId: catId,
+                snoozeUntil: 0
+            });
+            if (!state.filters.includes(catId)) state.filters.push(catId);
+            save();
+        }
+
+        function quickAdd() {
+            if (state.settings.categories.length > 0) {
+                addTask(state.settings.categories[0].id);
+            }
+        }
+
+        function deleteTask(taskId) {
+            
+            state.tasks = state.tasks.filter(t => t.id !== taskId);
+            save();
+            renderRight();
+        }
+
+        function prepareSpin() {
+            const now = Date.now();
+            const candidates = state.tasks.filter(t => 
+                state.filters.includes(t.catId) && 
+                t.snoozeUntil < now
+            );
+
+            if (candidates.length === 0) return alert("No available tasks match your filters!");
+
+            tempWinner = candidates[Math.floor(Math.random() * candidates.length)];
+            const duration = state.settings.spinSeconds;
+
+            if (duration <= 0) {
+                showModal();
+            } else {
+                runSlotAnimation(candidates, tempWinner, duration);
+            }
+        }
+
+        function runSlotAnimation(candidates, winner, duration) {
+            const btn = document.getElementById('spin-btn');
+            const win = document.getElementById('slot-window');
+            const strip = document.getElementById('slot-strip');
+            
+            btn.style.display = 'none';
+            win.style.display = 'block';
+            
+            const fillerCount = Math.max(20, duration * 10); 
+            
+            let html = "";
+            for(let i=0; i<fillerCount; i++) {
+                const r = candidates[Math.floor(Math.random() * candidates.length)];
+                const c = getCat(r.catId);
+                html += `<div class="slot-item" style="color:${c.color}">${r.text}</div>`;
+            }
+            const wCat = getCat(winner.catId);
+            html += `<div class="slot-item" id="slot-winner-node" style="color:${wCat.color}; font-size:1.4rem;">${winner.text}</div>`;
+            html += `<div class="slot-item">...</div><div class="slot-item">...</div>`;
+
+            strip.innerHTML = html;
+            strip.style.transition = 'none';
+            strip.style.transform = 'translateY(0)';
+            void strip.offsetWidth;
+
+            const targetY = (fillerCount * ITEM_HEIGHT) - (200 / 2) + (ITEM_HEIGHT / 2);
+
+            strip.style.transition = `transform ${duration}s var(--ease-bounce)`;
+            strip.style.transform = `translateY(-${targetY}px)`;
+
+            setTimeout(() => {
+                showModal();
+                setTimeout(() => {
+                    win.style.display = 'none';
+                    btn.style.display = 'block';
+                }, 200); 
+            }, duration * 1000);
+        }
+
+        function showModal() {
+            const modal = document.getElementById('modal-overlay');
+            const card = document.getElementById('winner-card');
+            const cat = getCat(tempWinner.catId);
+            
+            card.style.borderTopColor = cat.color;
+            document.getElementById('winner-text').innerText = tempWinner.text;
+            document.getElementById('winner-text').style.color = cat.color;
+            
+            const sIdx = state.settings.snoozeIdx;
+            document.getElementById('reroll-hint').innerText = `Reroll Action: ${SNOOZE_LABELS[sIdx]}`;
+
+            modal.style.display = 'flex';
+        }
+
+        function acceptWinner() {
+            if (!tempWinner) return;
+            if (state.current) state.tasks.push(state.current); 
+            state.tasks = state.tasks.filter(t => t.id !== tempWinner.id);
+            
+            state.current = tempWinner;
+            state.current.snoozeUntil = 0;
+            
+            closeModal();
+            save();
+            renderAll();
+        }
+
+        function reroll() {
+            if (!tempWinner) return;
+            const duration = SNOOZE_DURATIONS[state.settings.snoozeIdx];
+
+            if (duration === -1) {
+                state.tasks = state.tasks.filter(t => t.id !== tempWinner.id);
+            } else if (duration > 0) {
+                const task = state.tasks.find(t => t.id === tempWinner.id);
+                if (task) task.snoozeUntil = Date.now() + duration;
+            }
+            closeModal();
+            save();
+            renderRight(); 
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+            tempWinner = null;
+        }
+
+        function completeTask() {
+            if (!state.current) return;
+            state.archive.unshift(state.current);
+            state.current = null;
+            document.getElementById('main-check').checked = false;
+            save();
+            renderLeft();
+            
+            if (state.settings.autoRoll) {
+                setTimeout(prepareSpin, 500);
+            }
+        }
+
+        // --- Archive Logic ---
+        function clearArchive() {
+            if(confirm("Clear all history?")) {
+                state.archive = [];
+                save();
+                renderLeft();
+            }
+        }
+
+        function restoreTask(index) {
+            const item = state.archive.splice(index, 1)[0];
+            item.id = Date.now(); 
+            // Unshift restored item to top too
+            state.tasks.unshift(item);
+            
+            if (!state.filters.includes(item.catId)) state.filters.push(item.catId);
+            
+            save();
+            renderLeft();
+            renderRight();
+            renderCenter();
+        }
+
+        // --- Settings Logic ---
+        function updateSettingsUI() {
+            document.getElementById('snooze-display').innerText = SNOOZE_LABELS[document.getElementById('opt-snooze').value];
+            const speed = document.getElementById('opt-speed').value;
+            document.getElementById('speed-display').innerText = speed == 0 ? "Instant" : speed + " Seconds";
+        }
+
+        function updateSettings() {
+            state.settings.autoRoll = document.getElementById('opt-autoroll').checked;
+            state.settings.snoozeIdx = parseInt(document.getElementById('opt-snooze').value);
+            state.settings.spinSeconds = parseInt(document.getElementById('opt-speed').value);
+            save();
+            updateSettingsUI();
+        }
+
+        function addCategory() {
+            const id = 'cat' + Date.now();
+            state.settings.categories.push({ id: id, label: 'New', color: '#888888' });
+            state.filters.push(id);
+            save();
+            renderAll();
+        }
+
+        function updateCategory(idx, field, val) {
+            state.settings.categories[idx][field] = val;
+            save();
+            renderAll();
+        }
+
+        function deleteCategory(idx) {
+            if (state.settings.categories.length <= 1) return alert("Keep at least one category.");
+            const cat = state.settings.categories[idx];
+            if (!confirm("Delete " + cat.label + "?")) return;
+            state.settings.categories.splice(idx, 1);
+            state.filters = state.filters.filter(f => f !== cat.id);
+            save();
+            renderAll();
+        }
+
+        // --- Renderers ---
+        function getCat(id) {
+            return state.settings.categories.find(c => c.id === id) || { color:'#ccc', label:'?' };
+        }
+
+        function renderAll() {
+            renderLeft();
+            renderCenter();
+            renderRight();
+            renderCatList();
+        }
+
+        function renderLeft() {
+            const card = document.getElementById('active-card');
+            const ph = document.getElementById('placeholder-msg');
+            const content = document.getElementById('active-content');
+            
+            if (!state.current) {
+                card.classList.remove('active');
+                card.style.borderColor = '#e2e8f0';
+                ph.style.display = 'block';
+                content.style.display = 'none';
+            } else {
+                card.classList.add('active');
+                const cat = getCat(state.current.catId);
+                card.style.borderColor = cat.color;
+                ph.style.display = 'none';
+                content.style.display = 'block';
+                
+                document.getElementById('current-text').innerText = state.current.text;
+                const label = document.getElementById('current-cat-label');
+                label.innerText = cat.label.toUpperCase();
+                label.style.color = cat.color;
+            }
+
+            const arc = document.getElementById('archive-list');
+            arc.innerHTML = '';
+            state.archive.forEach((t, idx) => {
+                const div = document.createElement('div');
+                div.className = 'archive-item';
+                div.style.borderLeftColor = getCat(t.catId).color;
+                
+                div.innerHTML = `
+                    <span class="archive-text">${t.text}</span>
+                    <button class="restore-btn" onclick="restoreTask(${idx})" title="Restore to Queue">↩</button>
+                `;
+                arc.appendChild(div);
+            });
+        }
+
+        function renderCenter() {
+            const con = document.getElementById('filter-container');
+            con.innerHTML = '';
+            state.settings.categories.forEach(cat => {
+                const btn = document.createElement('button');
+                const active = state.filters.includes(cat.id);
+                btn.className = `filter-btn ${active ? 'active' : ''}`;
+                btn.style.backgroundColor = cat.color;
+                btn.innerText = active ? cat.label.substring(0,3).toUpperCase() : '';
+                btn.onclick = () => {
+                    if (active) state.filters = state.filters.filter(f => f !== cat.id);
+                    else state.filters.push(cat.id);
+                    save();
+                    renderCenter();
+                };
+                con.appendChild(btn);
+            });
+        }
+
+        function renderRight() {
+            const btnCon = document.getElementById('input-buttons');
+            btnCon.innerHTML = '';
+            state.settings.categories.forEach(cat => {
+                const btn = document.createElement('button');
+                btn.className = 'commit-btn';
+                btn.style.backgroundColor = cat.color;
+                btn.innerText = cat.label;
+                btn.onclick = () => addTask(cat.id);
+                btnCon.appendChild(btn);
+            });
+
+            const list = document.getElementById('todo-list');
+            list.innerHTML = '';
+            const now = Date.now();
+            
+            state.tasks.forEach(t => {
+                const isSnoozed = t.snoozeUntil > now;
+                const row = document.createElement('div');
+                row.className = `task-item ${isSnoozed ? 'snoozed' : ''}`;
+                const cat = getCat(t.catId);
+                row.style.borderLeftColor = isSnoozed ? '#a0aec0' : cat.color;
+
+                const inp = document.createElement('input');
+                inp.value = t.text + (isSnoozed ? " (Sleeping...)" : "");
+                if(isSnoozed) inp.disabled = true;
+                inp.onchange = (e) => { t.text = e.target.value; save(); };
+                
+                const delBtn = document.createElement('button');
+                delBtn.className = 'task-del-btn';
+                delBtn.innerHTML = '×';
+                delBtn.onclick = () => deleteTask(t.id);
+
+                row.appendChild(inp);
+                row.appendChild(delBtn);
+                list.appendChild(row);
+            });
+        }
+
+        function renderCatList() {
+            const list = document.getElementById('cat-list');
+            list.innerHTML = '';
+            state.settings.categories.forEach((cat, idx) => {
+                const row = document.createElement('div');
+                row.className = 'cat-edit-row';
+                
+                const col = document.createElement('input');
+                col.type = 'color';
+                col.className = 'cat-edit-color';
+                col.value = cat.color;
+                col.onchange = (e) => updateCategory(idx, 'color', e.target.value);
+
+                const txt = document.createElement('input');
+                txt.type = 'text';
+                txt.className = 'cat-edit-name';
+                txt.value = cat.label;
+                txt.onchange = (e) => updateCategory(idx, 'label', e.target.value);
+
+                const del = document.createElement('button');
+                del.className = 'cat-edit-del';
+                del.innerHTML = '×';
+                del.onclick = () => deleteCategory(idx);
+
+                row.append(col, txt, del);
+                list.appendChild(row);
+            });
+        }
+
+        window.onload = init;
+
+    </script>
+</body>
+</html>
